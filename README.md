@@ -65,7 +65,7 @@ A fully functional, production‑ready **Car Rental Booking Website** built usin
 ## 📁 Folder Structure
 
 ```
-car-rental-app/
+CarRentalDUHACKS/
 │
 ├── client/             # React Frontend
 │   ├── src/
@@ -73,8 +73,8 @@ car-rental-app/
 │   │   ├── pages/
 │   │   ├── context/
 │   │   ├── assets/
-│   │   ├── App.js
-│   │   ├── index.js
+│   │   ├── App.jsx
+│   │   ├── main.jsx
 │   └── package.json
 │
 ├── server/             # Node Backend
@@ -82,86 +82,13 @@ car-rental-app/
 │   ├── routes/
 │   ├── models/
 │   ├── middleware/
+│   ├── configs/
 │   ├── .env
-│   ├── index.js
+│   ├── server.js
 │   └── package.json
 │
 └── README.md
 ```
-
----
-
-## ⚙️ Installation & Setup
-
-### 🔧 Prerequisites
-
-Make sure you have:
-
-* Node.js installed
-* MongoDB Atlas account
-* ImageKit account
-
----
-
-## 🖥️ Local Setup
-
-### **1. Clone the Repository**
-
-```bash
-https://github.com/pratikdevelops/car-rental-mern.git
-cd car-rental-mern
-```
-
-### **2. Install Frontend Dependencies**
-
-```bash
-cd client
-npm install
-```
-
-### **3. Install Backend Dependencies**
-
-```bash
-cd ../server
-npm install
-```
-
----
-
-## 🔑 Environment Variables
-
-Create a `.env` file in the **server** folder and add:
-
-```
-MONGO_URI=your_mongo_atlas_url
-JWT_SECRET=your_jwt_secret
-IMAGEKIT_PUBLIC_KEY=
-IMAGEKIT_PRIVATE_KEY=
-IMAGEKIT_URL_ENDPOINT=
-```
-
----
-
-## ▶️ Run the App
-
-### **Start Backend**
-
-```bash
-cd server
-npm start
-```
-
-### **Start Frontend**
-
-```bash
-cd client
-npm run dev
-```
-
-Your project will be live at:
-
-* Frontend: [http://localhost:5173](http://localhost:5173)
-* Backend: [http://localhost:4000](http://localhost:4000)
 
 ---
 
