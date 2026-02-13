@@ -4,13 +4,16 @@ import FeaturedSection from '../components/FeaturedSection'
 import Banner from '../components/Banner'
 import Testimonial from '../components/Testimonial'
 import Newsletter from '../components/Newsletter'
+import { useAppContext } from '../context/AppContext'
 
 const Home = () => {
+  const { isRenter, isClient, isDriver, user } = useAppContext()
+  const showBanner = isClient || !user || (!isRenter && !isDriver)
   return (
     <>
       <Hero />
       <FeaturedSection />
-      <Banner />
+      {showBanner && <Banner />}
       <Testimonial />
       <Newsletter />
     </>

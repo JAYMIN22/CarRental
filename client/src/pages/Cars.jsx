@@ -14,10 +14,11 @@ const Cars = () => {
   const pickupLocation = searchParams.get('pickupLocation')
   const pickupDate = searchParams.get('pickupDate')
   const returnDate = searchParams.get('returnDate')
+  const searchQuery = searchParams.get('q') || ''
 
   const {cars, axios} = useAppContext()
 
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(searchQuery)
 
   const isSearchData = pickupLocation && pickupDate && returnDate
   const [filteredCars, setFilteredCars] = useState([])
@@ -51,11 +52,19 @@ const Cars = () => {
 
   useEffect(()=>{
     isSearchData && searchCarAvailablity()
-  },[])
+  },[isSearchData, pickupLocation, pickupDate, returnDate])
+
+  useEffect(()=>{
+    // keep input in sync with URL query when navigating from navbar
+    if (searchQuery && searchQuery !== input) {
+      setInput(searchQuery)
+      return
+    }
+  }, [searchQuery])
 
   useEffect(()=>{
     cars.length > 0 && !isSearchData && applyFilter()
-  },[input, cars])
+  },[input, cars, isSearchData])
 
   return (
     <div>

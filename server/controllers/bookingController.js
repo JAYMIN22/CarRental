@@ -37,11 +37,14 @@ export const checkAvailabilityOfCar = async (req, res)=>{
     }
 }
 
+// Driver fee per day when renter opts for "with driver"
+const DRIVER_FEE_PER_DAY = 500;
+
 // API to Create Booking
 export const createBooking = async (req, res)=>{
     try {
         const {_id} = req.user;
-        const {car, pickupDate, returnDate} = req.body;
+        const {car, pickupDate, returnDate, needsDriver} = req.body;
 
         const isAvailable = await checkAvailability(car, pickupDate, returnDate)
         if(!isAvailable){
@@ -58,9 +61,24 @@ export const createBooking = async (req, res)=>{
         // Minimum 1 day booking
         if (noOfDays === 0) noOfDays = 1;
         
-        const price = carData.pricePerDay * noOfDays;
+        let price = carData.pricePerDay * noOfDays;
+        let driverFee = 0;
 
-        await Booking.create({car, owner: carData.owner, user: _id, pickupDate, returnDate, price})
+        if (needsDriver) {
+            driverFee = DRIVER_FEE_PER_DAY * noOfDays;
+            price += driverFee;
+        }
+
+        await Booking.create({
+            car,
+            owner: carData.owner,
+            user: _id,
+            pickupDate,
+            returnDate,
+            price,
+            needsDriver: !!needsDriver,
+            driverFee
+        })
 
         res.json({success: true, message: "Booking Created"})
 
@@ -74,7 +92,10 @@ export const createBooking = async (req, res)=>{
 export const getUserBookings = async (req, res)=>{
     try {
         const { _id } = req.user;
-        const bookings = await Booking.find({ user: _id }).populate("car").sort({createdAt: -1})
+        const bookings = await Booking.find({ user: _id })
+            .populate("car")
+            .populate("driver", "name")
+            .sort({createdAt: -1})
         res.json({success: true, bookings})
 
     } catch (error) {
@@ -83,14 +104,16 @@ export const getUserBookings = async (req, res)=>{
     }
 }
 
-// API to get Owner Bookings
+// API to get Owner/Client Bookings
 
 export const getOwnerBookings = async (req, res)=>{
     try {
-        if(req.user.role !== 'owner'){
-            return res.json({ success: false, message: "Unauthorized" })
-        }
-        const bookings = await Booking.find({owner: req.user._id}).populate('car').populate('user', '-password').sort({createdAt: -1 })
+        // At this point, role is already checked by authorizeRoles in the route.
+        const bookings = await Booking.find({owner: req.user._id})
+            .populate('car')
+            .populate('user', '-password')
+            .populate('driver', 'name')
+            .sort({createdAt: -1 })
         res.json({success: true, bookings})
     } catch (error) {
         console.log(error.message);
@@ -98,7 +121,7 @@ export const getOwnerBookings = async (req, res)=>{
     }
 }
 
-// API to change booking status
+// API to change booking status (for owner/client)
 export const changeBookingStatus = async (req, res)=>{
     try {
         const { _id } = req.user;

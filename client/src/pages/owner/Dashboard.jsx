@@ -45,7 +45,7 @@ const Dashboard = () => {
 
   return (
     <div className='px-4 pt-10 md:px-10 flex-1'>
-      <Title title="Admin Dashboard" subTitle="Monitor overall platform performance including total cars, bookings, revenue, and recent activities"/>
+      <Title title="Client Dashboard" subTitle="Monitor your cars, bookings, and earnings as a car provider."/>
 
       <div className='grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-8 max-w-3xl'>
         {dashboardCards.map((card, index)=>(

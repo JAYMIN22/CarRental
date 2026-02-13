@@ -7,12 +7,15 @@ const Hero = () => {
 
     const [pickupLocation, setPickupLocation] = useState('')
 
-    const {pickupDate, setPickupDate, returnDate, setReturnDate, navigate} = useAppContext()
+    const {pickupDate, setPickupDate, returnDate, setReturnDate, navigate, isClient, isDriver} = useAppContext()
 
     const handleSearch = (e)=>{
         e.preventDefault()
         navigate('/cars?pickupLocation=' + pickupLocation + '&pickupDate=' + pickupDate + '&returnDate=' + returnDate)
     }
+
+    // Use activeRole: Driver sees driver CTA, Client sees client CTA, Renter/Guest see search
+    const showRentalSearch = !isClient && !isDriver
 
   return (
     <motion.div 
@@ -24,8 +27,11 @@ const Hero = () => {
         <motion.h1 initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-        className='text-4xl md:text-5xl font-semibold'>Luxury cars on Rent</motion.h1>
+        className='text-4xl md:text-5xl font-semibold'>
+          {showRentalSearch ? 'Cars on Rent' : isDriver ? 'Driver Portal' : isClient ? 'Manage Your Fleet' : 'Cars on Rent'}
+        </motion.h1>
       
+      {showRentalSearch ? (
       <motion.form
       initial={{ scale: 0.95, opacity: 0, y: 50 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -59,6 +65,24 @@ const Hero = () => {
                 Search
             </motion.button>
       </motion.form>
+      ) : (
+      <motion.div
+      initial={{ scale: 0.95, opacity: 0, y: 50 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.4 }}
+      className='flex flex-col items-center gap-4'>
+        <p className='text-gray-600'>
+          {isDriver ? 'View trips and ride requests assigned to you.' : isClient ? 'Add cars, manage bookings, and track your earnings.' : 'View trips and ride requests.'}
+        </p>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={()=> navigate(isDriver ? '/driver' : '/owner')}
+          className='flex items-center justify-center gap-1 px-9 py-3 bg-primary hover:bg-primary-dull text-white rounded-full cursor-pointer'>
+          Go to {isDriver ? 'Driver Dashboard' : 'Client Dashboard'}
+        </motion.button>
+      </motion.div>
+      )}
 
       <motion.img 
         initial={{ y: 100, opacity: 0 }}

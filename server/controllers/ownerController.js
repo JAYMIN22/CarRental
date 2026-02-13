@@ -5,11 +5,24 @@ import User from "../models/User.js";
 import fs from "fs";
 
 
-// API to Change Role of User
+// API to Change Role of User (promote to client/owner)
 export const changeRoleToOwner = async (req, res)=>{
     try {
         const { _id } = req.user;
-        await User.findByIdAndUpdate(_id, {role: "owner"})
+        const user = await User.findById(_id);
+        if (!user) {
+            return res.json({ success: false, message: "User not found" });
+        }
+
+        user.role = "owner";
+        if (!Array.isArray(user.roles)) {
+            user.roles = [];
+        }
+        if (!user.roles.includes("owner") && !user.roles.includes("client")) {
+            user.roles.push("owner");
+        }
+
+        await user.save();
         res.json({success: true, message: "Now you can list cars"})
     } catch (error) {
         console.log(error.message);
@@ -116,15 +129,58 @@ export const deleteCar = async (req, res) =>{
     }
 }
 
-// API to get Dashboard Data
-export const getDashboardData = async (req, res) =>{
+// API to update car details (without changing image)
+export const updateCarDetails = async (req, res) =>{
     try {
-        const { _id, role } = req.user;
+        const { _id } = req.user;
+        const { carId, carData } = req.body;
 
-        if(role !== 'owner'){
+        const car = await Car.findById(carId);
+
+        if (!car) {
+            return res.json({ success: false, message: "Car not found" });
+        }
+
+        // Ensure the logged-in owner owns this car
+        if (car.owner.toString() !== _id.toString()) {
             return res.json({ success: false, message: "Unauthorized" });
         }
 
+        // Only update allowed fields
+        const updatableFields = [
+            "brand",
+            "model",
+            "year",
+            "category",
+            "seating_capacity",
+            "fuel_type",
+            "transmission",
+            "pricePerDay",
+            "location",
+            "description",
+        ];
+
+        updatableFields.forEach((field) => {
+            if (carData && Object.prototype.hasOwnProperty.call(carData, field)) {
+                car[field] = carData[field];
+            }
+        });
+
+        await car.save();
+
+        res.json({ success: true, message: "Car details updated", car });
+    } catch (error) {
+        console.log(error.message);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+// API to get Dashboard Data
+export const getDashboardData = async (req, res) =>{
+    try {
+        const { _id } = req.user;
+
+        // Route-level authorizeRoles already ensures only clients/owners/admins reach here.
         const cars = await Car.find({owner: _id})
         const bookings = await Booking.find({ owner: _id }).populate('car').sort({ createdAt: -1 });
 

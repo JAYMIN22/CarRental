@@ -49,6 +49,7 @@ const ManageBookings = () => {
             <tr>
               <th className="p-3 font-medium">Car</th>
               <th className="p-3 font-medium max-md:hidden">Date Range</th>
+              <th className="p-3 font-medium max-md:hidden">Driver</th>
               <th className="p-3 font-medium">Total</th>
               <th className="p-3 font-medium max-md:hidden">Payment</th>
               <th className="p-3 font-medium">Actions</th>
@@ -65,6 +66,10 @@ const ManageBookings = () => {
 
                 <td className='p-3 max-md:hidden'>
                   {booking.pickupDate.split('T')[0]} to {booking.returnDate.split('T')[0]}
+                </td>
+
+                <td className='p-3 max-md:hidden'>
+                  {booking.needsDriver ? (booking.driver?.name || 'Awaiting driver') : 'Self drive'}
                 </td>
 
                 <td className='p-3'>{currency}{booking.price}</td>

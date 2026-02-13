@@ -7,7 +7,7 @@ import { motion } from 'motion/react'
 
 const MyBookings = () => {
 
-  const { axios, user, currency } = useAppContext()
+  const { axios, user, currency, isRenter } = useAppContext()
 
   const [bookings, setBookings] = useState([])
 
@@ -25,8 +25,10 @@ const MyBookings = () => {
   }
 
   useEffect(()=>{
-    user && fetchMyBookings()
-  },[user])
+    if (user && isRenter) {
+      fetchMyBookings()
+    }
+  },[user, isRenter])
 
   return (
     <motion.div 
@@ -79,6 +81,12 @@ const MyBookings = () => {
                 <div>
                   <p className='text-gray-500'>Pick-up Location</p>
                   <p>{booking.car.location}</p>
+                </div>
+              </div>
+              <div className='flex items-start gap-2 mt-3'>
+                <div>
+                  <p className='text-gray-500'>Drive Option</p>
+                  <p>{booking.needsDriver ? `With Driver${booking.driver ? ` • ${booking.driver.name}` : ' (awaiting driver)'}` : 'Self Drive'}</p>
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { assets, dummyCarData } from '../assets/assets'
+import { assets } from '../assets/assets'
 import Loader from '../components/Loader'
 import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
@@ -10,19 +10,38 @@ const CarDetails = () => {
 
   const {id} = useParams()
 
-  const {cars, axios, pickupDate, setPickupDate, returnDate, setReturnDate} = useAppContext()
+  const {cars, axios, pickupDate, setPickupDate, returnDate, setReturnDate, user, isRenter, setShowLogin, isOwner, isDriver} = useAppContext()
+
+  // Only renters and guests can see booking form. Clients/drivers: no rent UI.
+  const showBookingForm = (isRenter || !user) && !isOwner && !isDriver
 
   const navigate = useNavigate()
   const [car, setCar] = useState(null)
+  const [driveOption, setDriveOption] = useState('self') // 'self' | 'driver'
   const currency = import.meta.env.VITE_CURRENCY
+  const DRIVER_FEE_PER_DAY = 500
 
   const handleSubmit = async (e)=>{
     e.preventDefault();
+
+    // Prevent non-renter roles from booking
+    if (!user) {
+      setShowLogin(true)
+      return;
+    }
+
+    if (!isRenter) {
+      toast.error('Only renter accounts can book cars')
+      return;
+    }
+
     try {
+      const needsDriver = driveOption === 'driver'
       const {data} = await axios.post('/api/bookings/create', {
         car: id,
         pickupDate, 
-        returnDate
+        returnDate,
+        needsDriver
       })
 
       if (data.success){
@@ -48,14 +67,14 @@ const CarDetails = () => {
         Back to all cars
        </button>
 
-       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12'>
+       <div className={`grid grid-cols-1 gap-8 lg:gap-12 ${showBookingForm ? 'lg:grid-cols-3' : ''}`}>
           {/* Left: Car Image & Details */}
           <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
 
-          className='lg:col-span-2'>
+          className={showBookingForm ? 'lg:col-span-2' : ''}>
               <motion.img 
               initial={{ scale: 0.98, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -116,7 +135,8 @@ const CarDetails = () => {
               </motion.div>
           </motion.div>
 
-          {/* Right: Booking Form */}
+          {/* Right: Booking Form (renters/guests only) or Price (clients/drivers) */}
+          {showBookingForm ? (
           <motion.form 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -140,11 +160,36 @@ const CarDetails = () => {
               type="date" className='border border-borderColor px-3 py-2 rounded-lg' required id='return-date'/>
             </div>
 
+            <div className='flex flex-col gap-2'>
+              <label>Drive option</label>
+              <div className='flex gap-4'>
+                <label className='flex items-center gap-2 cursor-pointer'>
+                  <input type="radio" name="driveOption" checked={driveOption === 'self'} onChange={()=>setDriveOption('self')}/>
+                  Self Drive
+                </label>
+                <label className='flex items-center gap-2 cursor-pointer'>
+                  <input type="radio" name="driveOption" checked={driveOption === 'driver'} onChange={()=>setDriveOption('driver')}/>
+                  With Driver (+{currency}{DRIVER_FEE_PER_DAY}/day)
+                </label>
+              </div>
+            </div>
+
             <button className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer'>Book Now</button>
 
             <p className='text-center text-sm'>No credit card required to reserve</p>
 
           </motion.form>
+          ) : (
+          <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className='shadow-lg h-max sticky top-18 rounded-xl p-6 text-gray-500'>
+            <p className='flex items-center justify-between text-2xl text-gray-800 font-semibold'>{currency}{car.pricePerDay}<span className='text-base text-gray-400 font-normal'>per day</span></p>
+            {isOwner && <p className='text-sm mt-2 text-gray-400'>You manage cars. Renters book through the platform.</p>}
+            {isDriver && <p className='text-sm mt-2 text-gray-400'>Drivers do not rent cars.</p>}
+          </motion.div>
+          )}
        </div>
 
     </div>

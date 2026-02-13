@@ -5,10 +5,13 @@ const bookingSchema = new mongoose.Schema({
     car: {type: ObjectId, ref: "Car", required: true},
     user: {type: ObjectId, ref: "User", required: true},
     owner: {type: ObjectId, ref: "User", required: true},
+    driver: {type: ObjectId, ref: "User", default: null},
     pickupDate: {type: Date, required: true},
     returnDate: {type: Date, required: true},
     status: {type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending"},
-    price: {type: Number, required: true}
+    price: {type: Number, required: true},
+    needsDriver: {type: Boolean, default: false},
+    driverFee: {type: Number, default: 0}
 },{timestamps: true})
 
 const Booking = mongoose.model('Booking', bookingSchema)

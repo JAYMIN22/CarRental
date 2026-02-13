@@ -5,19 +5,26 @@ import { Outlet } from 'react-router-dom'
 import { useAppContext } from '../../context/AppContext'
 
 const Layout = () => {
-  const {isOwner, navigate} = useAppContext()
+  const { isClient, navigate, roles, setActiveRole } = useAppContext()
 
-  useEffect(()=>{
-    if(!isOwner){
+  useEffect(() => {
+    if (!isClient) {
       navigate('/')
+      return
     }
-  },[isOwner])
+    // Keep active role as client when viewing client dashboard
+    const hasClient = Array.isArray(roles) && (roles.includes('client') || roles.includes('owner'))
+    if (hasClient) setActiveRole('client')
+  }, [isClient, navigate, roles, setActiveRole])
+
   return (
-    <div className='flex flex-col'>
+    <div className='h-screen flex flex-col pt-16'>
       <NavbarOwner />
-      <div className='flex'>
+      <div className='flex flex-1 overflow-hidden'>
         <Sidebar />
-        <Outlet />
+        <div className='flex-1 overflow-y-auto'>
+          <Outlet />
+        </div>
       </div>
     </div>
   )
