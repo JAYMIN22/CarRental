@@ -1,0 +1,9 @@
+# Git Aliases for Quick Commits
+# Add these to your git config: git config --global alias.cm '!f() { git add . && git commit -m "$1" && git push; }; f'
+# Or use the scripts: commit.ps1 or quick-commit.bat
+
+# Quick commit and push (usage: git cm "message")
+[alias]
+    cm = "!f() { git add . && git commit -m \"$1\" && git push; }; f"
+    save = "!git add . && git commit -m 'Save progress' && git push"
+    quick = "!git add . && git commit -m"
