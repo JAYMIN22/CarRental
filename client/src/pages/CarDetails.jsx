@@ -1,25 +1,63 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { assets } from '../assets/assets'
 import Loader from '../components/Loader'
 import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
 import { motion } from 'motion/react'
+import axiosLib from 'axios'
+
+const paymentsAxios = axiosLib.create({
+  baseURL: import.meta.env.VITE_PAYMENTS_URL || import.meta.env.VITE_BASE_URL || '',
+})
 
 const CarDetails = () => {
 
   const {id} = useParams()
+  const [searchParams] = useSearchParams()
+  
+  // Get dates from URL params first (when coming from search), then fallback to context
+  const urlPickupDate = searchParams.get('pickupDate')
+  const urlReturnDate = searchParams.get('returnDate')
 
-  const {cars, axios, pickupDate, setPickupDate, returnDate, setReturnDate, user, isRenter, setShowLogin, isOwner, isDriver} = useAppContext()
+  const {cars, axios, pickupDate: contextPickupDate, setPickupDate, returnDate: contextReturnDate, setReturnDate, user, isRenter, isClient, setShowLogin, isDriver, currency} = useAppContext()
+  
+  // Use URL params if available, otherwise use context values
+  const pickupDate = urlPickupDate || contextPickupDate
+  const returnDate = urlReturnDate || contextReturnDate
 
   // Only renters and guests can see booking form. Clients/drivers: no rent UI.
-  const showBookingForm = (isRenter || !user) && !isOwner && !isDriver
+  // NOTE: don't use legacy isOwner here; it can be true for multi-role accounts even in renter mode.
+  const showBookingForm = (isRenter || !user) && !isClient && !isDriver
 
   const navigate = useNavigate()
   const [car, setCar] = useState(null)
   const [driveOption, setDriveOption] = useState('self') // 'self' | 'driver'
-  const currency = import.meta.env.VITE_CURRENCY
+  const [isProcessing, setIsProcessing] = useState(false)
   const DRIVER_FEE_PER_DAY = 500
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
+  const calculateDays = () => {
+    if (!pickupDate || !returnDate) return 0
+    const start = new Date(pickupDate)
+    const end = new Date(returnDate)
+    const diffTime = end.getTime() - start.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays > 0 ? diffDays : 0
+  }
 
   const handleSubmit = async (e)=>{
     e.preventDefault();
@@ -35,29 +73,145 @@ const CarDetails = () => {
       return;
     }
 
+    const days = calculateDays()
+    if (days <= 0) {
+      toast.error('Please select a valid rental period')
+      return
+    }
+
+    if (!car) {
+      toast.error('Car details not loaded yet')
+      return
+    }
+
+    const needsDriver = driveOption === 'driver'
+    const rentalBase = car.pricePerDay * days
+    const driverCost = needsDriver ? DRIVER_FEE_PER_DAY * days : 0
+    const totalAmount = rentalBase + driverCost
+
+    if (!totalAmount || totalAmount <= 0) {
+      toast.error('Invalid booking amount')
+      return
+    }
+
     try {
-      const needsDriver = driveOption === 'driver'
-      const {data} = await axios.post('/api/bookings/create', {
-        car: id,
-        pickupDate, 
-        returnDate,
-        needsDriver
+      setIsProcessing(true)
+
+      const scriptLoaded = await loadRazorpayScript()
+      if (!scriptLoaded) {
+        toast.error('Unable to load payment gateway. Please try again.')
+        setIsProcessing(false)
+        return
+      }
+
+      const { data } = await paymentsAxios.post('/api/payments/create-order', {
+        amount: totalAmount * 100, // convert to smallest currency unit
+        currency,
+        meta: {
+          carId: id,
+          pickupDate,
+          returnDate,
+          needsDriver,
+        },
       })
 
-      if (data.success){
-        toast.success(data.message)
-        navigate('/my-bookings')
-      }else{
-        toast.error(data.message)
+      if (!data?.success || !data?.order || !data?.key) {
+        toast.error(data?.message || 'Unable to start payment')
+        setIsProcessing(false)
+        return
       }
+
+      const options = {
+        key: data.key,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: 'Car Rental',
+        description: `${car.brand} ${car.model} booking`,
+        order_id: data.order.id,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        notes: {
+          booking_type: 'car_rental',
+          car_id: id,
+        },
+        handler: async (response) => {
+          try {
+            const verifyRes = await paymentsAxios.post('/api/payments/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              meta: {
+                car: id,
+                pickupDate,
+                returnDate,
+                needsDriver,
+                amount: totalAmount,
+              },
+            })
+
+            if (!verifyRes.data?.success) {
+              toast.error(verifyRes.data?.message || 'Payment verification failed')
+              return
+            }
+
+            const bookingRes = await axios.post('/api/bookings/create', {
+              car: id,
+              pickupDate,
+              returnDate,
+              needsDriver,
+              paymentId: response.razorpay_payment_id,
+              orderId: response.razorpay_order_id,
+              amount: totalAmount,
+              paymentMode: 'online',
+            })
+
+            if (bookingRes.data?.success) {
+              toast.success('Payment successful and booking created')
+              navigate('/my-bookings')
+            } else {
+              toast.error(bookingRes.data?.message || 'Booking creation failed after payment')
+            }
+          } catch (err) {
+            toast.error(err?.message || 'Something went wrong after payment')
+          } finally {
+            setIsProcessing(false)
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast('Payment cancelled')
+            setIsProcessing(false)
+          },
+        },
+        theme: {
+          color: '#2563eb',
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
     } catch (error) {
       toast.error(error.message)
+      setIsProcessing(false)
     }
   }
 
   useEffect(()=>{
     setCar(cars.find(car => car._id === id))
   },[cars, id])
+
+  // Sync URL params to context when component mounts or URL params change
+  useEffect(() => {
+    if (urlPickupDate && urlPickupDate !== contextPickupDate) {
+      setPickupDate(urlPickupDate)
+    }
+    if (urlReturnDate && urlReturnDate !== contextReturnDate) {
+      setReturnDate(urlReturnDate)
+    }
+  }, [urlPickupDate, urlReturnDate, contextPickupDate, contextReturnDate, setPickupDate, setReturnDate])
 
   return car ? (
     <div className='px-6 md:px-16 lg:px-24 xl:px-32 mt-16'>
@@ -174,7 +328,12 @@ const CarDetails = () => {
               </div>
             </div>
 
-            <button className='w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer'>Book Now</button>
+            <button
+              disabled={isProcessing}
+              className={`w-full bg-primary hover:bg-primary-dull transition-all py-3 font-medium text-white rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}
+            >
+              {isProcessing ? 'Processing...' : 'Pay & Book Now'}
+            </button>
 
             <p className='text-center text-sm'>No credit card required to reserve</p>
 
@@ -186,7 +345,7 @@ const CarDetails = () => {
           transition={{ delay: 0.3, duration: 0.6 }}
           className='shadow-lg h-max sticky top-18 rounded-xl p-6 text-gray-500'>
             <p className='flex items-center justify-between text-2xl text-gray-800 font-semibold'>{currency}{car.pricePerDay}<span className='text-base text-gray-400 font-normal'>per day</span></p>
-            {isOwner && <p className='text-sm mt-2 text-gray-400'>You manage cars. Renters book through the platform.</p>}
+            {isClient && <p className='text-sm mt-2 text-gray-400'>You manage cars. Renters book through the platform.</p>}
             {isDriver && <p className='text-sm mt-2 text-gray-400'>Drivers do not rent cars.</p>}
           </motion.div>
           )}

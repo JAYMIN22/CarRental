@@ -19,6 +19,8 @@ const AddCar = () => {
     fuel_type: '',
     seating_capacity: 0,
     location: '',
+    latitude: '',
+    longitude: '',
     description: '',
   })
 
@@ -48,6 +50,8 @@ const AddCar = () => {
           fuel_type: '',
           seating_capacity: 0,
           location: '',
+          latitude: '',
+          longitude: '',
           description: '',
         })
       }else{
@@ -138,14 +142,43 @@ const AddCar = () => {
           </div>
         </div>
 
-         {/* Car Location */}
+         {/* Car Location (city) */}
          <div className='flex flex-col w-full'>
-            <label>Location</label>
+            <label>Location (City / Area)</label>
             <select onChange={e=> setCar({...car, location: e.target.value})} value={car.location} className='px-3 py-2 mt-1 border border-borderColor rounded-md outline-none'>
               <option value="">Select a location</option>
               {cityList.map((city)=> <option key={city} value={city}>{city}</option>)}
             </select>
          </div>
+
+         {/* Precise coordinates for nearby search */}
+         <div className='grid grid-cols-1 sm:grid-cols-2 gap-6'>
+           <div className='flex flex-col w-full'>
+             <label>Latitude (optional)</label>
+             <input
+               type="number"
+               step="0.000001"
+               placeholder="e.g. 19.0760"
+               className='px-3 py-2 mt-1 border border-borderColor rounded-md outline-none'
+               value={car.latitude}
+               onChange={e=> setCar({...car, latitude: e.target.value})}
+             />
+           </div>
+           <div className='flex flex-col w-full'>
+             <label>Longitude (optional)</label>
+             <input
+               type="number"
+               step="0.000001"
+               placeholder="e.g. 72.8777"
+               className='px-3 py-2 mt-1 border border-borderColor rounded-md outline-none'
+               value={car.longitude}
+               onChange={e=> setCar({...car, longitude: e.target.value})}
+             />
+           </div>
+         </div>
+         <p className='text-xs text-gray-400'>
+           Adding accurate coordinates enables Zoomcar-style “cars near me” search within a radius.
+         </p>
         {/* Car Description */}
          <div className='flex flex-col w-full'>
             <label>Description</label>

@@ -20,6 +20,8 @@ const ManageCars = () => {
     fuel_type: '',
     seating_capacity: '',
     location: '',
+    latitude: '',
+    longitude: '',
     description: '',
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -82,6 +84,8 @@ const ManageCars = () => {
       fuel_type: car.fuel_type || '',
       seating_capacity: car.seating_capacity || '',
       location: car.location || '',
+      latitude: car.latitude ?? '',
+      longitude: car.longitude ?? '',
       description: car.description || '',
     })
   }
@@ -98,6 +102,8 @@ const ManageCars = () => {
       fuel_type: '',
       seating_capacity: '',
       location: '',
+      latitude: '',
+      longitude: '',
       description: '',
     })
     setIsSaving(false)
@@ -314,6 +320,29 @@ const ManageCars = () => {
                   value={editData.location}
                   onChange={e => setEditData({ ...editData, location: e.target.value })}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label>Latitude (optional)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="px-3 py-2 mt-1 border border-borderColor rounded-md outline-none"
+                    value={editData.latitude}
+                    onChange={e => setEditData({ ...editData, latitude: e.target.value })}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label>Longitude (optional)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="px-3 py-2 mt-1 border border-borderColor rounded-md outline-none"
+                    value={editData.longitude}
+                    onChange={e => setEditData({ ...editData, longitude: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="flex flex-col">

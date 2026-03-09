@@ -2,13 +2,28 @@ import React from 'react'
 import { assets } from '../assets/assets'
 import { useNavigate } from 'react-router-dom'
 
-const CarCard = ({car}) => {
+const CarCard = ({car, searchParams, distanceKm}) => {
 
     const currency = import.meta.env.VITE_CURRENCY
     const navigate = useNavigate()
 
+    const handleCardClick = () => {
+      let url = `/car-details/${car._id}`
+      // If search params exist, append them to the URL so CarDetails can use them
+      if (searchParams && searchParams.pickupLocation && searchParams.pickupDate && searchParams.returnDate) {
+        const params = new URLSearchParams({
+          pickupLocation: searchParams.pickupLocation,
+          pickupDate: searchParams.pickupDate,
+          returnDate: searchParams.returnDate
+        })
+        url += '?' + params.toString()
+      }
+      navigate(url)
+      scrollTo(0,0)
+    }
+
   return (
-    <div onClick={()=> {navigate(`/car-details/${car._id}`); scrollTo(0,0)}} className='group rounded-xl overflow-hidden shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer'>
+    <div onClick={handleCardClick} className='group rounded-xl overflow-hidden shadow-lg hover:-translate-y-1 transition-all duration-500 cursor-pointer'>
       
       <div className='relative h-48 overflow-hidden'> 
         <img src={car.image} alt="Car Image" className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'/>
@@ -44,7 +59,14 @@ const CarCard = ({car}) => {
             </div>
             <div className='flex items-center text-sm text-muted-foreground'>
                 <img src={assets.location_icon} alt="" className='h-4 mr-2'/>
-                <span>{car.location}</span>
+                <span>
+                  {car.location}
+                  {typeof distanceKm === 'number' && (
+                    <span className="text-xs text-gray-400 ml-1">
+                      • {distanceKm.toFixed(1)} km away
+                    </span>
+                  )}
+                </span>
             </div>
         </div>
 
