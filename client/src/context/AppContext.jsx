@@ -19,7 +19,7 @@ export const AppProvider = ({ children })=>{
     const [roles, setRoles] = useState([])
     const [activeRole, setActiveRoleState] = useState(() => {
         try {
-            const stored = localStorage.getItem(ACTIVE_ROLE_KEY)
+            const stored = sessionStorage.getItem(ACTIVE_ROLE_KEY)
             if (['renter','client','driver','admin'].includes(stored)) return stored
         } catch (_) {}
         return null
@@ -28,8 +28,8 @@ export const AppProvider = ({ children })=>{
     const setActiveRole = (role) => {
         setActiveRoleState(role)
         try {
-            if (role) localStorage.setItem(ACTIVE_ROLE_KEY, role)
-            else localStorage.removeItem(ACTIVE_ROLE_KEY)
+            if (role) sessionStorage.setItem(ACTIVE_ROLE_KEY, role)
+            else sessionStorage.removeItem(ACTIVE_ROLE_KEY)
         } catch (_) {}
     }
     const [showLogin, setShowLogin] = useState(false)
@@ -87,7 +87,9 @@ export const AppProvider = ({ children })=>{
 
     // Function to log out the user (silent, message handled elsewhere)
     const logout = ()=>{
-        localStorage.removeItem('token')
+        try {
+            sessionStorage.removeItem('token')
+        } catch (_) {}
         setToken(null)
         setUser(null)
         setIsOwner(false)
@@ -134,9 +136,13 @@ export const AppProvider = ({ children })=>{
         };
     }, [logout, navigate, setShowLogin]);
 
-    // useEffect to retrieve the token from localStorage
+    // useEffect to retrieve the token from sessionStorage
     useEffect(()=>{
-        const token = localStorage.getItem('token')
+        let storedToken = null
+        try {
+            storedToken = sessionStorage.getItem('token')
+        } catch (_) {}
+        const token = storedToken
         setToken(token)
         fetchCars()
     },[])

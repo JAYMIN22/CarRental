@@ -41,7 +41,9 @@ const Login = () => {
                 if (data.message) toast.success(data.message)
                 // Set token in header & storage for fetch - don't update context yet
                 // so fetchUser won't run and overwrite activeRole before we set it
-                localStorage.setItem('token', data.token)
+                try {
+                    sessionStorage.setItem('token', data.token)
+                } catch (_) {}
                 axios.defaults.headers.common['Authorization'] = data.token
 
                 const { data: userData } = await axios.get('/api/user/data')
